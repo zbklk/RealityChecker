@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	"RealityChecker/internal/data"
 	"RealityChecker/internal/types"
 )
 
@@ -120,7 +121,11 @@ func (hws *HotWebsiteStage) isSubdomain(domain, baseDomain string) bool {
 
 // loadHotWebsites 加载热门网站列表
 func (hws *HotWebsiteStage) loadHotWebsites() {
-	file, err := os.Open("data/hot_websites.txt")
+	path, err := data.ResolvePath("hot_websites.txt")
+	if err != nil {
+		return
+	}
+	file, err := os.Open(path)
 	if err != nil {
 		return
 	}

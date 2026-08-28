@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"RealityChecker/internal/data"
+	"RealityChecker/internal/security"
 	"RealityChecker/internal/types"
 )
 
@@ -241,12 +243,16 @@ func (cs *CDNStage) checkCertIssuerHint(domain string) (string, string) {
 	)
 
 	// 建立TLS连接获取证书
-	conn, err := tls.DialWithDialer(&net.Dialer{
-		Timeout: certTimeout,
-	}, "tcp", domain+certPort, &tls.Config{
+	tcpConn, err := security.DialTimeoutPublic("tcp", net.JoinHostPort(domain, "443"), certTimeout)
+	if err != nil {
+		return "", ""
+	}
+	conn := tls.Client(tcpConn, &tls.Config{
 		ServerName: domain,
 	})
-	if err != nil {
+	_ = conn.SetDeadline(time.Now().Add(certTimeout))
+	if err := conn.Handshake(); err != nil {
+		tcpConn.Close()
 		return "", ""
 	}
 	defer conn.Close()
@@ -315,7 +321,11 @@ func (cs *CDNStage) getProviderFromHeader(header string) string {
 
 // loadCDNKeywords 加载CDN关键词
 func (cs *CDNStage) loadCDNKeywords() {
-	file, err := os.Open("data/cdn_keywords.txt")
+	path, err := data.ResolvePath("cdn_keywords.txt")
+	if err != nil {
+		return
+	}
+	file, err := os.Open(path)
 	if err != nil {
 		return
 	}

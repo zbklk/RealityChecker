@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	"RealityChecker/internal/security"
 	"RealityChecker/internal/types"
 )
 
@@ -43,10 +44,10 @@ func (irs *IPResolverStage) Execute(ctx *types.PipelineContext) error {
 // quickConnectivityTest 快速连通性测试
 func (irs *IPResolverStage) quickConnectivityTest(ip string) bool {
 	// 测试HTTPS端口443的连通性
-	conn, err := net.DialTimeout("tcp", ip+":443", 2*time.Second)
+	conn, err := security.DialTimeoutPublic("tcp", net.JoinHostPort(ip, "443"), 2*time.Second)
 	if err != nil {
 		// 如果HTTPS不可达，尝试HTTP端口80
-		conn, err = net.DialTimeout("tcp", ip+":80", 2*time.Second)
+		conn, err = security.DialTimeoutPublic("tcp", net.JoinHostPort(ip, "80"), 2*time.Second)
 		if err != nil {
 			return false
 		}
@@ -57,24 +58,9 @@ func (irs *IPResolverStage) quickConnectivityTest(ip string) bool {
 
 // resolveIP 解析IP地址
 func (irs *IPResolverStage) resolveIP(domain string) (string, error) {
-	// 检查是否已经是IP地址
-	if net.ParseIP(domain) != nil {
-		return domain, nil
-	}
-
-	// 使用自定义DNS解析器，设置更短的超时
-	resolver := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{
-				Timeout: 2 * time.Second, // DNS查询超时2秒
-			}
-			return d.DialContext(ctx, network, address)
-		},
-	}
-
-	// 解析域名
-	ips, err := resolver.LookupIPAddr(context.Background(), domain)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	ips, err := security.LookupPublicIPs(ctx, domain)
 	if err != nil {
 		return "", err
 	}
@@ -85,13 +71,13 @@ func (irs *IPResolverStage) resolveIP(domain string) (string, error) {
 
 	// 优先选择IPv4地址
 	for _, ipAddr := range ips {
-		if ipAddr.IP.To4() != nil {
-			return ipAddr.IP.String(), nil
+		if ipAddr.To4() != nil {
+			return ipAddr.String(), nil
 		}
 	}
 
 	// 如果没有IPv4，使用IPv6
-	return ips[0].IP.String(), nil
+	return ips[0].String(), nil
 }
 
 // CanEarlyExit 是否可以早期退出

@@ -3,9 +3,9 @@ package detectors
 import (
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
+	"RealityChecker/internal/security"
 	"RealityChecker/internal/types"
 )
 
@@ -23,6 +23,10 @@ func (rs *RedirectStage) Execute(ctx *types.PipelineContext) error {
 	// 创建HTTP客户端，禁用自动重定向
 	client := &http.Client{
 		Timeout: 3 * time.Second, // 减少HTTP客户端超时时间到3秒
+		Transport: &http.Transport{
+			Proxy:       nil,
+			DialContext: security.DialContextPublic,
+		},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
@@ -131,27 +135,20 @@ func (rs *RedirectStage) followRedirects(client *http.Client, domain string) *Re
 		if resp.StatusCode >= redirectMin && resp.StatusCode < redirectMax {
 			location := resp.Header.Get("Location")
 			if location != "" {
-				// 处理相对URL
-				const (
-					rootPathPrefix = "/"
-					httpPrefix     = "http"
-				)
-
-				if strings.HasPrefix(location, rootPathPrefix) {
-					parsedURL, _ := url.Parse(currentURL)
-					location = parsedURL.Scheme + "://" + parsedURL.Host + location
-				} else if !strings.HasPrefix(location, httpPrefix) {
-					location = httpsScheme + location
-				}
-
-				parsedLocation, err := url.Parse(location)
-				if err == nil {
+				baseURL, baseErr := url.Parse(currentURL)
+				parsedLocation, locationErr := url.Parse(location)
+				if baseErr == nil && locationErr == nil {
+					parsedLocation = baseURL.ResolveReference(parsedLocation)
+					if parsedLocation.Scheme != "https" && parsedLocation.Scheme != "http" {
+						resp.Body.Close()
+						break
+					}
 					newDomain := parsedLocation.Hostname()
 					if newDomain != domain && newDomain != "" {
 						result.RedirectChain = append(result.RedirectChain, newDomain)
 						result.IsRedirected = true
 						result.RedirectCount++
-						currentURL = location
+						currentURL = parsedLocation.String()
 						domain = newDomain
 						resp.Body.Close()
 						continue

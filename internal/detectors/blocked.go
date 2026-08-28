@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"RealityChecker/internal/data"
 	"RealityChecker/internal/types"
 )
 
@@ -64,7 +65,11 @@ func (bs *BlockedStage) checkBlocked(domain string) (bool, string) {
 
 // loadGFWList 加载GFWList
 func (bs *BlockedStage) loadGFWList() {
-	file, err := os.Open("data/gfwlist.conf")
+	path, err := data.ResolvePath("gfwlist.conf")
+	if err != nil {
+		return
+	}
+	file, err := os.Open(path)
 	if err != nil {
 		return
 	}

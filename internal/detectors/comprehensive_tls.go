@@ -4,10 +4,10 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"net"
 	"strings"
 	"time"
 
+	"RealityChecker/internal/security"
 	"RealityChecker/internal/types"
 )
 
@@ -216,12 +216,15 @@ func (cts *ComprehensiveTLSStage) checkX25519Support(domain string, timeout time
 		MaxVersion:       tls.VersionTLS13,
 	}
 
-	conn, err := tls.DialWithDialer(&net.Dialer{
-		Timeout: timeout,
-	}, "tcp", domain+port, x25519Config)
-
+	tcpConn, err := security.DialTimeoutPublic("tcp", domain+port, timeout)
 	if err != nil {
 		// X25519握手失败，说明不支持X25519
+		return false
+	}
+	conn := tls.Client(tcpConn, x25519Config)
+	_ = conn.SetDeadline(time.Now().Add(timeout))
+	if err := conn.Handshake(); err != nil {
+		tcpConn.Close()
 		return false
 	}
 	defer conn.Close()
