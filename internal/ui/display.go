@@ -1,10 +1,7 @@
 package ui
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"time"
 
 	"RealityChecker/internal/version"
@@ -56,43 +53,7 @@ func PrintErrorWithDetails(message string, details ...string) {
 
 // getLatestVersion 获取GitHub最新版本号
 func getLatestVersion() string {
-	// 设置超时时间
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-	}
-
-	// 请求GitHub API
-	resp, err := client.Get("https://api.github.com/repos/V2RaySSR/RealityChecker/releases/latest")
-	if err != nil {
-		return "" // 网络错误时返回空字符串
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return "" // HTTP错误时返回空字符串
-	}
-
-	// 读取响应
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "" // 读取错误时返回空字符串
-	}
-
-	// 解析JSON
-	var release GitHubRelease
-	if err := json.Unmarshal(body, &release); err != nil {
-		return "" // 解析错误时返回空字符串
-	}
-
-	// 返回版本号，如果没有tag_name则使用name
-	if release.TagName != "" {
-		return release.TagName
-	}
-	if release.Name != "" {
-		return release.Name
-	}
-
-	return "" // 没有版本信息时返回空字符串
+	return ""
 }
 
 // getVersionInfo 获取版本信息字符串
@@ -132,19 +93,5 @@ func getDisplayWidth(s string) int {
 
 // PrintAdvertisement 打印广告信息
 func PrintAdvertisement() {
-	// 使用颜色代码
-	blue := "\033[36m"   // 青色
-	yellow := "\033[33m" // 黄色
-	white := "\033[37m"  // 白色
-	reset := "\033[0m"   // 重置颜色
-
-	fmt.Println()
-	fmt.Printf("%s-----------------------------------------------------%s\n", white, reset)
-	fmt.Println()
-	fmt.Printf("%s %s五年老机场%s %s%shttps://goii.cc/mn%s %s（牧牛云）%s\n",
-		white,
-		yellow, reset,
-		blue, white, reset,
-		yellow, reset)
-	fmt.Println()
+	// Hardened build intentionally contains no advertising or tracking links.
 }
