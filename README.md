@@ -2,6 +2,8 @@
 
 一个专业的Reality协议目标网站检测工具，用于评估网站是否适合作为Reality协议的目标域名。
 
+> 安全加固分支说明：`codex/hardened-build-20260828` 默认使用离线数据、启动时进行 SHA-256 完整性校验、禁止访问私网/本机/保留地址，并取消版本查询和推广请求。详细变更、构建与验证结果见 [SECURITY-HARDENING.md](SECURITY-HARDENING.md)。
+
 [V2RaySSR综合网](https://v2rayssr.com)
 
 ## ✨ 功能特性
@@ -154,9 +156,9 @@ go build -o reality-checker
 
 ## 🔧常见问题
 
-**1. 数据文件下载失败**
+**1. 数据文件校验失败**
 
-如果自动下载失败，请手动下载以下文件到 `data/` 目录：
+安全加固版不会在运行时自动下载或替换文件。请从同一个 Release 重新解压完整的 `data/` 目录，不要混用其他版本的数据文件。程序会对以下文件执行 SHA-256 校验：
 
 - [Country.mmdb](https://github.com/Loyalsoldier/geoip/releases/latest/download/Country.mmdb)
 - [gfwlist.conf](https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/gfw.txt)
