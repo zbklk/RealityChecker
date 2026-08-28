@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"RealityChecker/internal/security"
 	"RealityChecker/internal/types"
 )
 
@@ -87,8 +88,9 @@ func (cm *ConnectionManager) Stop() error {
 // GetHTTPConnection 获取HTTP连接
 func (cm *ConnectionManager) GetHTTPConnection(ctx context.Context, domain string) (net.Conn, error) {
 	// 总是创建新的HTTP连接
-	const httpPort = ":80"
-	conn, err := net.DialTimeout("tcp", domain+httpPort, cm.config.Network.Timeout)
+	dialCtx, cancel := context.WithTimeout(ctx, cm.config.Network.Timeout)
+	defer cancel()
+	conn, err := security.DialContextPublic(dialCtx, "tcp", net.JoinHostPort(domain, "80"))
 	if err != nil {
 		cm.mu.Lock()
 		cm.stats.FailedConnections++
@@ -105,8 +107,9 @@ func (cm *ConnectionManager) GetHTTPConnection(ctx context.Context, domain strin
 // GetTLSConnection 获取TLS连接
 func (cm *ConnectionManager) GetTLSConnection(ctx context.Context, domain string) (*tls.Conn, error) {
 	// 总是创建新的TLS连接，确保ALPN协商正确
-	const tlsPort = ":443"
-	tcpConn, err := net.DialTimeout("tcp", domain+tlsPort, cm.config.Network.Timeout)
+	dialCtx, cancel := context.WithTimeout(ctx, cm.config.Network.Timeout)
+	defer cancel()
+	tcpConn, err := security.DialContextPublic(dialCtx, "tcp", net.JoinHostPort(domain, "443"))
 	if err != nil {
 		cm.mu.Lock()
 		cm.stats.FailedConnections++
@@ -139,8 +142,9 @@ func (cm *ConnectionManager) GetTLSConnection(ctx context.Context, domain string
 // GetX25519TLSConnection 获取强制X25519的TLS连接
 func (cm *ConnectionManager) GetX25519TLSConnection(ctx context.Context, domain string) (*tls.Conn, error) {
 	// 创建强制X25519的TLS连接
-	const tlsPort = ":443"
-	tcpConn, err := net.DialTimeout("tcp", domain+tlsPort, cm.config.Network.Timeout)
+	dialCtx, cancel := context.WithTimeout(ctx, cm.config.Network.Timeout)
+	defer cancel()
+	tcpConn, err := security.DialContextPublic(dialCtx, "tcp", net.JoinHostPort(domain, "443"))
 	if err != nil {
 		cm.mu.Lock()
 		cm.stats.FailedConnections++
